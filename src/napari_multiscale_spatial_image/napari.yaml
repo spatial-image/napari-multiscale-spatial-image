@@ -7,5 +7,5 @@ contributions:
       title: Open data with Multiscale spatial image
   readers:
     - command: napari-multiscale-spatial-image.get_reader
-      accepts_directories: false
-      filename_patterns: ['*.npy']
+      accepts_directories: true
+      filename_patterns: ['*.zarr', '*.zarr/', '*.zarr\\']

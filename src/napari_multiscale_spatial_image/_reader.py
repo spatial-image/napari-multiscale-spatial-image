@@ -5,7 +5,11 @@ It implements the Reader specification, but your plugin may choose to
 implement multiple readers or even other plugin contributions. see:
 https://napari.org/stable/plugins/guides.html?#readers
 """
-import numpy as np
+import os
+
+import zarr
+from datatree import open_datatree
+from natsort import natsorted
 
 
 def napari_get_reader(path):
@@ -22,14 +26,15 @@ def napari_get_reader(path):
         If the path is a recognized format, return a function that accepts the
         same path or list of paths, and returns a list of layer data tuples.
     """
-    if isinstance(path, list):
-        # reader plugins may be handed single path, or a list of paths.
-        # if it is a list, it is assumed to be an image stack...
-        # so we are only going to look at the first file.
-        path = path[0]
-
     # if we know we cannot read the file, we immediately return None.
-    if not path.endswith(".npy"):
+    if isinstance(path, list):
+        return None
+
+    if not (path.endswith(".zarr") or path.endswith(".zarr" + os.sep)):
+        return None
+
+    root = zarr.open(path)
+    if "multiscaleSpatialImageVersion" not in root.attrs:
         return None
 
     # otherwise we return the *function* that can read ``path``.
@@ -58,15 +63,25 @@ def reader_function(path):
         layer. Both "meta", and "layer_type" are optional. napari will
         default to layer_type=="image" if not provided
     """
-    # handle both a string and a list of strings
-    paths = [path] if isinstance(path, str) else path
-    # load all files into array
-    arrays = [np.load(_path) for _path in paths]
-    # stack arrays into single array
-    data = np.squeeze(np.stack(arrays))
+    multiscale = open_datatree(path, engine="zarr")
+    scales = [
+        childname
+        for childname in multiscale.children
+        if childname.startswith("scale")
+    ]
+    scales = natsorted(scales)
+
+    multiscale_data = []
+    for scale in scales:
+        keys = multiscale[scale].data_vars.keys()
+        assert len(keys) == 1
+        dataset_name = [key for key in keys][0]
+        print(dataset_name)
+        dataset = multiscale[scale].data_vars.get(dataset_name)
+        multiscale_data.append(dataset)
 
     # optional kwargs for the corresponding viewer.add_* method
     add_kwargs = {}
 
     layer_type = "image"  # optional, default is "image"
-    return [(data, add_kwargs, layer_type)]
+    return [(multiscale_data, add_kwargs, layer_type)]
