@@ -80,8 +80,19 @@ def reader_function(path):
         dataset = multiscale[scale].data_vars.get(dataset_name)
         multiscale_data.append(dataset)
 
+    # Find the scale information for the highest resolution dataset
+    scale = scales[
+        0
+    ]  # sorted list, first element corresponds to highest resolution dataset
+    datasets = multiscale.attrs["multiscales"][0]["datasets"]
+    for dataset in datasets:
+        if scale in dataset["path"]:
+            for coord_transform in dataset["coordinateTransformations"]:
+                if "scale" in coord_transform:
+                    scale_kwarg = coord_transform["scale"]
+
     # optional kwargs for the corresponding viewer.add_* method
-    add_kwargs = {}
+    add_kwargs = {"scale": scale_kwarg}
 
     layer_type = "image"  # optional, default is "image"
     return [(multiscale_data, add_kwargs, layer_type)]
