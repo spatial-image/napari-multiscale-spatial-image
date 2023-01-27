@@ -4,7 +4,7 @@ contributions:
   commands:
     - id: napari-multiscale-spatial-image.get_reader
       python_name: napari_multiscale_spatial_image._reader:napari_get_reader
-      title: Open data with Multiscale spatial image
+      title: Open data with multiscale spatial image
   readers:
     - command: napari-multiscale-spatial-image.get_reader
       accepts_directories: true
